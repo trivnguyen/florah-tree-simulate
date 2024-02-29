@@ -10,13 +10,14 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import ytree
-from florah_analysis import envs, utils
-
+from florah_analysis import utils
 
 ALL_NODE_PROPS = [
     'mass', 'redshift', 'rvir', 'vrms', 'vmax', 'rs', 'x', 'y', 'z',
     'id', 'desc_id', 'Snap_num']
-
+DEFAULT_METADATA_DIR = "/mnt/ceph/users/tnguyen/florah-tree/metadata"
+DEFAULT_ISOTREE_DIR = "/mnt/home/tnguyen/isotrees"
+DEFAULT_RAW_DATASET_DIR = "/mnt/home/tnguyen/ceph/florah-tree/datasets/raw_datasets"
 
 def get_ancestors(halo, node_props, branch_id=0, min_mass=0, num_ancestors_max=1):
     """ Get full halo trees """
