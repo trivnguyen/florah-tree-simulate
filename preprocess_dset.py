@@ -5,6 +5,8 @@ import sys
 import pickle
 from pathlib import Path
 
+sys.path.append('/mnt/home/tnguyen/projects/florah/florah-simulate')
+
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -102,7 +104,7 @@ def preprocess_dset(config: config_dict.ConfigDict):
     # split into multiple jobs
     id_trees_arr = np.array_split(
         np.arange(num_trees), config.num_jobs)[config.id_job]
-    loop = tqdm(id_trees_arr)
+    loop = tqdm(id_trees_arr, desc='Processing trees', miniters=1000)
 
     graphs_ppr = []
     for itree in loop:
@@ -124,11 +126,15 @@ def preprocess_dset(config: config_dict.ConfigDict):
 
             new_halo_ids, new_halo_desc_ids, new_node_feats = tree_utils.subsample_trees(
                 halo_ids, halo_desc_ids, node_feats, snap_nums, snap_ids)
-            new_halo_ids, new_halo_desc_ids, new_node_feats = tree_utils.remove_anc(
-                new_halo_ids, new_halo_desc_ids, 10**new_node_feats[..., 0],
-                new_node_feats, num_max_anc=config.preprocess.num_max_ancestors,
-                min_mass_ratio=config.preprocess.min_mass_ratio,)
-            num_ancestors = tree_utils.calc_num_ancestors(
+            new_halo_ids, new_halo_desc_ids, new_node_feats = tree_utils.remove_progenitors(
+                new_halo_ids,
+                new_halo_desc_ids,
+                10**new_node_feats[..., 0],
+                new_node_feats,
+                num_max_prog=config.preprocess.num_max_progenitors,
+                min_mass_ratio=config.preprocess.min_mass_ratio,
+            )
+            num_ancestors = tree_utils.calc_num_progenitors(
                 new_halo_ids, new_halo_desc_ids)
 
             # # shuffle the trees

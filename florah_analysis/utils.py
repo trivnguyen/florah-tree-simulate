@@ -2,11 +2,15 @@
 import os
 import numpy as np
 
-from . import envs
+DEFAULT_DATASET_DIR = "/mnt/home/tnguyen/ceph/florah-tree/datasets/processed"
+DEFAULT_RAW_DATASET_DIR = "/mnt/home/tnguyen/ceph/florah-tree/datasets/raw_datasets"
+DEFAULT_METADATA_DIR = "/mnt/ceph/users/tnguyen/florah-tree/metadata"
+DEFAULT_OUTPUT_DIR = "/mnt/ceph/users/tnguyen/florah-tree/logging"
+DEFAULT_ISOTREE_DIR = "/mnt/home/tnguyen/isotrees"
 
 def read_snapshot_times(box_name):
     """ Read in snapshot times from the simulations """
-    default_dir = envs.DEFAULT_METADATA_DIR
+    default_dir = DEFAULT_METADATA_DIR
     if "GUREFT" in box_name:
         table_name = "snapshot_times_gureft.txt"
     else:
@@ -16,7 +20,7 @@ def read_snapshot_times(box_name):
         os.path.join(default_dir, table_name), delimiter=',', unpack=True)
     return snapshot_times
 
-def get_run(name, version="best", prefix=envs.DEFAULT_OUTPUT_DIR):
+def get_run(name, version="best", prefix=DEFAULT_OUTPUT_DIR):
     """ Get path to run directory """
     # check if prefix directory exists
     if not os.path.exists(prefix):

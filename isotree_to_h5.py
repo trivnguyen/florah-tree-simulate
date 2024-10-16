@@ -4,7 +4,6 @@ import os
 import time
 from pathlib import Path
 
-import florah
 import h5py
 import networkx as nx
 import numpy as np
@@ -18,6 +17,38 @@ ALL_NODE_PROPS = [
 DEFAULT_METADATA_DIR = "/mnt/ceph/users/tnguyen/florah-tree/metadata"
 DEFAULT_ISOTREE_DIR = "/mnt/home/tnguyen/isotrees"
 DEFAULT_RAW_DATASET_DIR = "/mnt/home/tnguyen/ceph/florah-tree/datasets/raw_datasets"
+
+
+def write_dataset(path, node_features, tree_features, ptr=None, headers={}):
+    """ Write dataset into HDF5 file """
+    if ptr is None:
+        ptr = np.arange(len(list(node_features.values())[0]))
+
+    default_headers ={
+        "node_features": list(node_features.keys()),
+        "tree_features": list(tree_features.keys()),
+    }
+    default_headers['all_features'] = (
+        default_headers['node_features'] + default_headers['tree_features'])
+    headers.update(default_headers)
+
+    with h5py.File(path, 'w') as f:
+        # write pointers
+        f.create_dataset('ptr', data=ptr)
+
+        # write node features
+        for key in node_features:
+            feat = np.concatenate(node_features[key])
+            dset = f.create_dataset(key, data=feat)
+            dset.attrs.update({'type': 0})
+
+        # write tree features
+        for key in tree_features:
+            dset = f.create_dataset(key, data=tree_features[key])
+            dset.attrs.update({'type': 1})
+
+        # write headers
+        f.attrs.update(headers)
 
 def get_ancestors(halo, node_props, branch_id=0, min_mass=0, num_ancestors_max=1):
     """ Get full halo trees """
@@ -52,7 +83,7 @@ def parse_cmd():
         "--box-name-out", required=True, type=str,
         help="Output name of the dataset")
     parser.add_argument(
-        "--num-anc-max", default=1, required=False, type=int,
+        "--num-anc-max", default=10000, required=False, type=int,
         help="Maximum number of ancestors to include in the dataset")
     parser.add_argument(
         "--min-num-root", default=500, required=False, type=int,
@@ -70,14 +101,15 @@ def main():
     FLAGS = parse_cmd()
 
     # Read in isotree
-    isotree_dir = os.path.join(envs.DEFAULT_ISOTREE_DIR, FLAGS.box_name)
-    outdir = os.path.join(envs.DEFAULT_RAW_DATASET_DIR, FLAGS.box_name_out)
+    isotree_dir = os.path.join(DEFAULT_ISOTREE_DIR, FLAGS.box_name)
+    outdir = os.path.join(DEFAULT_RAW_DATASET_DIR, FLAGS.box_name_out)
     os.makedirs(outdir, exist_ok=True)
 
     # Read in metadata
     meta = pd.read_csv(
-        os.path.join(envs.DEFAULT_METADATA_DIR, 'meta.csv'),
+        os.path.join(DEFAULT_METADATA_DIR, 'meta.csv'),
         sep=',', header=0)
+    print(meta)
     Mdm = float(meta['Mdm'][meta['name']==FLAGS.box_name])
     Mmin_root = Mdm * FLAGS.min_num_root
     Mmin_halo = Mdm * FLAGS.min_num_halo
@@ -112,13 +144,13 @@ def main():
     print('Reading tree from {}'.format(tree_fn))
 
     data = ytree.load(tree_fn)
-    if ('VSMDPL' in FLAGS.box_name):
+    if ('vsmdpl' in FLAGS.box_name):
         data.add_alias_field("rvir", "Rvir")
-    elif ('TNG' in FLAGS.box_name):
+    elif ('tng' in FLAGS.box_name):
         data.add_alias_field("rvir", "Rvir")
         data.add_alias_field('Snap_num', 'Snap_idx')
 
-    elif ('GUREFT' in FLAGS.box_name):
+    elif ('gureft' in FLAGS.box_name):
         data.add_alias_field("mass", "mvir")
 
     # apply a minimum mass cut on the root halos
@@ -172,7 +204,7 @@ def main():
 
     out_tree_fn = os.path.join(outdir, f"{iso_tree_name}.h5")
     print("Writing to {}".format(out_tree_fn))
-    florah.utils.io.write_dataset(
+    write_dataset(
         out_tree_fn, node_features,
         tree_features, ptr=ptr, headers=headers)
 

@@ -88,6 +88,7 @@ def create_pyg_graph(halo_id, halo_desc_id, halo_props=None):
         # convert each property to a tensor
         props = {}
         for key in halo_props.keys():
+            # NOTE: ancestors here are the same as progenitors
             if key in ("halo_id", "halo_desc_id", "num_ancestors"):
                 dtype = torch.long
             else:
@@ -168,28 +169,28 @@ def subsample_trees(
 
     return new_halo_ids, new_halo_desc_ids, new_node_feats
 
-def calc_num_ancestors(halo_ids, halo_desc_ids):
-    """ Calculate the number of ancestors for each halo. """
+def calc_num_progenitors(halo_ids, halo_desc_ids):
+    """ Calculate the number of progenitors for each halo. """
     unique_desc_ids, counts = np.unique(halo_desc_ids, return_counts=True)
-    num_ancestors = np.zeros(len(halo_desc_ids), dtype=np.int32)
+    num_progenitors = np.zeros(len(halo_desc_ids), dtype=np.int32)
     for desc_id, count in zip(unique_desc_ids, counts):
-        num_ancestors[halo_ids == desc_id] = count
-    return num_ancestors
+        num_progenitors[halo_ids == desc_id] = count
+    return num_progenitors
 
-def remove_anc(
-    halo_ids, halo_desc_ids, halo_mass, node_feats,
-    num_max_anc=1, min_mass_ratio=0.01):
-    """ Enforce the maxmium number of ancestors. If more than num_max_anc
-    halos have the same descendant, only keep the num_max_anc most massive ones.
+def remove_progenitors(
+    halo_ids, halo_desc_ids, halo_mass, node_feats, num_max_prog=1,
+    min_mass_ratio=0.01):
+    """ Enforce the maxmium number of progenitors. If more than num_max_prog
+    halos have the same descendant, only keep the num_max_prog most massive ones.
 
-    If the mass ratio between the ancestors and the most massive ancestor is
-    less than min_mass_ratio, remove the ancestor.
+    If the mass ratio between the progenitors and the most massive progenitor is
+    less than min_mass_ratio, remove the progenitor.
 
     Note that this code assumes the halos are sorted by snapshot number starting
     from the root halo.
     """
-    if num_max_anc < 1:
-        raise ValueError("num_max_anc must be >= 1.")
+    if num_max_prog < 1:
+        raise ValueError("num_max_prog must be >= 1.")
 
     # identify the halos with the same descendant
     unique_desc_ids, counts = np.unique(halo_desc_ids, return_counts=True)
@@ -203,13 +204,13 @@ def remove_anc(
         # sort the indices by mass
         sort = np.argsort(halo_mass[indices])[::-1]
         indices = indices[sort]
-        m_anc = halo_mass[indices]
-        m_anc_ratio = m_anc / np.max(m_anc)
+        m_prog = halo_mass[indices]
+        m_prog_ratio = m_prog / np.max(m_prog)
 
-        # remove the ancestors with mass ratio < min_mass_ratio
+        # remove the progenitors with mass ratio < min_mass_ratio
         bad_mask = np.zeros(len(indices), dtype=bool)
-        bad_mask = bad_mask | (m_anc_ratio < min_mass_ratio)
-        bad_mask[num_max_anc:] = True
+        bad_mask = bad_mask | (m_prog_ratio < min_mass_ratio)
+        bad_mask[num_max_prog:] = True
 
         bad_indices.append(indices[bad_mask])
 
