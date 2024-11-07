@@ -50,28 +50,21 @@ def write_dataset(path, node_features, tree_features, ptr=None, headers={}):
         # write headers
         f.attrs.update(headers)
 
-def get_ancestors(halo, node_props, branch_id=0, min_mass=0, num_ancestors_max=1):
+def get_ancestors(halo, node_props, min_mass=0, num_ancestors_max=1):
     """ Get full halo trees """
+    features = {p: [halo[p], ] for p in node_props}
 
-    features = {p: [np.array(halo['prog', p]), ] for p in node_props}
-    branch_indices = [branch_id, ]
+    ancestors = list(halo.ancestors)
+    mass = np.array([anc['mass'] for anc in ancestors])
+    sorted_indices = np.argsort(mass)[::-1]
 
-    for prog in list(halo['prog']):
-        ancestors = list(prog.ancestors)
-        mass = np.array([anc['mass'] for anc in ancestors])
-        sorted = np.argsort(mass)[::-1]
-
-        for i in sorted[1:num_ancestors_max+1]:
-            anc = ancestors[i]
-            if anc['mass'] >= min_mass:
-                next_branch_id = branch_id + i + 1
-                next_features, next_branch_indices = get_ancestors(
-                    anc, node_props, next_branch_id, min_mass, num_ancestors_max)
-                for p in node_props:
-                    features[p] += next_features[p]
-                branch_indices += next_branch_indices
-
-    return features, branch_indices
+    for i in sorted_indices[:num_ancestors_max]:
+        anc = ancestors[i]
+        if anc['mass'] >= min_mass:
+            next_features = get_ancestors(anc, node_props, min_mass, num_ancestors_max)
+            for p in node_props:
+                features[p].extend(next_features[p])
+    return features
 
 
 def parse_cmd():
@@ -167,10 +160,11 @@ def main():
             print('Processing tree {} / {}'.format(itree, len(tree_list)))
 
         halo = tree_list[itree]
-        features, branch_indices = get_ancestors(
-            halo, ALL_NODE_PROPS, branch_id=0, min_mass=Mmin_halo,
-            num_ancestors_max=FLAGS.num_anc_max)
-        features = {p: np.concatenate(features[p]) for p in ALL_NODE_PROPS}
+        features = get_ancestors(
+            halo, ALL_NODE_PROPS, min_mass=Mmin_halo,
+            num_ancestors_max=FLAGS.num_anc_max
+        )
+        features = {p: np.array(features[p]) for p in ALL_NODE_PROPS}
         num_nodes = len(features['mass'])
         for p in ALL_NODE_PROPS:
             node_features[p].append(features[p])
