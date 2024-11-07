@@ -123,10 +123,12 @@ def preprocess_dset(config: config_dict.ConfigDict):
                 config.preprocess.snapshot_step_max,
                 ini=0)
             snap_ids = snap_nums[0] - snap_ids
-
             new_halo_ids, new_halo_desc_ids, new_node_feats = tree_utils.subsample_trees(
                 halo_ids, halo_desc_ids, node_feats, snap_nums, snap_ids)
-            new_halo_ids, new_halo_desc_ids, new_node_feats = tree_utils.remove_progenitors(
+            if len(new_halo_ids) < config.preprocess.num_min_nodes:
+                continue
+
+            new_halo_ids, new_halo_desc_ids, new_node_feats, new_node_pos = tree_utils.process_progenitors(
                 new_halo_ids,
                 new_halo_desc_ids,
                 10**new_node_feats[..., 0],
@@ -150,9 +152,15 @@ def preprocess_dset(config: config_dict.ConfigDict):
                 'halo_id': new_halo_ids,
                 'halo_desc_id': new_halo_desc_ids,
                 'num_ancestors': num_ancestors,
+                'prog_pos': new_node_pos,
             }
             graph = tree_utils.create_pyg_graph(
                 new_halo_ids, new_halo_desc_ids, feat_dict)
+
+            if not tree_utils.check_mass_sort(graph):
+                Warning('Tree {} is not sorted by mass'.format(itree))
+                continue
+
             graphs_ppr.append(graph)
 
     # save the graphs
