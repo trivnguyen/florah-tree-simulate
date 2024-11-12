@@ -246,7 +246,6 @@ def process_progenitors(
     sorted_index, prog_position = fun(
         0, halo_ids, halo_desc_ids, halo_mass,
         num_max_prog=num_max_prog, min_mass_ratio=min_mass_ratio, prog_pos=0)
-    print(sorted_index, prog_position)
     new_node_feats = node_feats[sorted_index]
     new_halo_ids = halo_ids[sorted_index]
     new_halo_desc_ids = halo_desc_ids[sorted_index]

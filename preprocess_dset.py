@@ -107,11 +107,11 @@ def preprocess_dset(config: config_dict.ConfigDict):
     loop = tqdm(id_trees_arr, desc='Processing trees', miniters=1000)
 
     graphs_ppr = []
+    node_props = config.preprocess.node_props + ['Snap_num']
     for itree in loop:
         loop.set_description('Processing tree {}'.format(itree))
 
-        node_feats = np.stack(
-            [node_features[p][itree] for p in config.preprocess.node_props], axis=1)
+        node_feats = np.stack([node_features[p][itree] for p in node_props], axis=1)
         halo_ids = node_features['id'][itree]
         halo_desc_ids = node_features['desc_id'][itree]
         snap_nums = node_features['Snap_num'][itree].astype(int)
@@ -147,15 +147,18 @@ def preprocess_dset(config: config_dict.ConfigDict):
             #     new_node_feats = new_node_feats[shuffle_indices]
 
             # create the graph
+            snap_num = new_node_feats[:, -1]
+            new_node_feats = new_node_feats[:, :-1]
+
             feat_dict = {
                 'x': new_node_feats,
                 'halo_id': new_halo_ids,
                 'halo_desc_id': new_halo_desc_ids,
                 'num_ancestors': num_ancestors,
                 'prog_pos': new_node_pos,
+                'snap': snap_num,
             }
-            graph = tree_utils.create_pyg_graph(
-                new_halo_ids, new_halo_desc_ids, feat_dict)
+            graph = tree_utils.create_pyg_graph(new_halo_ids, new_halo_desc_ids, feat_dict)
 
             if not tree_utils.check_mass_sort(graph):
                 Warning('Tree {} is not sorted by mass'.format(itree))
