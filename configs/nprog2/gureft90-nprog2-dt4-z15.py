@@ -14,7 +14,6 @@ def get_config():
     cfg.data = data = config_dict.ConfigDict()
     data.root = "/mnt/ceph/users/tnguyen/florah-tree/datasets/raw_datasets"
     data.name = "gureft90-nprogMAX"
-    data.name = "gureft90-nprogMAX"
     data.box = "gureft90"
     data.num_subbox_dim = 1
     data.num_files_max = int(1**3)
@@ -27,5 +26,6 @@ def get_config():
     preprocess.min_mass_ratio = 0.001
     preprocess.z_max = 15
     preprocess.num_max_progenitors = 2  # the max cardinality of each node
+    preprocess.num_min_nodes = 10
 
     return cfg
