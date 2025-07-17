@@ -99,7 +99,10 @@ def preprocess_dset(config: config_dict.ConfigDict):
 
     # Preprocess the dataset
     num_trees = len(tree_features['num_nodes'])
-    num_snap_max = np.where(z_snaps > config.preprocess.z_max)[0][0]  # maximum number of snapshots
+    if z_snaps[-1] > config.preprocess.z_max:
+        num_snap_max = np.where(z_snaps > config.preprocess.z_max)[0][0]  # maximum number of snapshots
+    else:
+        num_snap_max = len(z_snaps) - 1
 
     # split into multiple jobs
     id_trees_arr = np.array_split(
