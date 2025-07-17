@@ -2,6 +2,7 @@
 import argparse
 import os
 import time
+from tqdm import tqdm
 from pathlib import Path
 
 import h5py
@@ -12,8 +13,9 @@ import ytree
 from florah_analysis import utils
 
 ALL_NODE_PROPS = [
-    'mass', 'redshift', 'rvir', 'vrms', 'vmax', 'rs', 'x', 'y', 'z',
-    'id', 'desc_id', 'Snap_num']
+    'mass', 'redshift', 'rvir', 'Rs_Klypin', 'vrms', 'vmax', 'Spin', 'rs', 'x', 'y', 'z',
+    'id', 'desc_id', 'Snap_num',
+    ]
 DEFAULT_METADATA_DIR = "/mnt/ceph/users/tnguyen/florah-tree/metadata"
 DEFAULT_ISOTREE_DIR = "/mnt/home/tnguyen/isotrees"
 DEFAULT_RAW_DATASET_DIR = "/mnt/home/tnguyen/ceph/florah-tree/datasets/raw_datasets"
@@ -85,8 +87,14 @@ def parse_cmd():
         "--min-num-halo", default=100, required=False, type=int,
         help="Minimum number of DM particles in a prog halo")
     parser.add_argument(
+        "--ifile", required=False, type=int, default=0,
+        help="File number")
+    parser.add_argument(
         "--ijob", required=False, type=int, default=0,
         help="Job number")
+    parser.add_argument(
+        "--njobs", required=False, type=int, default=1,
+        help="Number of jobs to split the isotree into")
     return parser.parse_args()
 
 
@@ -130,8 +138,11 @@ def main():
                 else:
                     print(path)
                 tree_files.append(path)
-    tree_fn = tree_files[FLAGS.ijob]
-    iso_tree_name = Path(tree_fn).stem
+    tree_fn = tree_files[FLAGS.ifile]
+    if FLAGS.njobs == 1:
+        iso_tree_name = Path(tree_fn).stem
+    else:
+        iso_tree_name = f"{Path(tree_fn).stem}-{FLAGS.ijob}"
 
     # Read in the data file
     print('Reading tree from {}'.format(tree_fn))
@@ -155,9 +166,16 @@ def main():
 
     node_features = {p: [] for p in ALL_NODE_PROPS}
     tree_features = {'root_id': [], 'num_nodes': []}
-    for itree in range(len(tree_list)):
-        if itree % 100 == 0:
-            print('Processing tree {} / {}'.format(itree, len(tree_list)))
+
+    # divide into list of jobs
+    num_trees = len(tree_list)
+    num_trees_per_job = int(np.ceil(num_trees / FLAGS.njobs))
+    start = FLAGS.ijob * num_trees_per_job
+    end = min((FLAGS.ijob + 1) * num_trees_per_job, num_trees)
+    loop = tqdm(range(start, end))
+    for itree in loop:
+        # if itree % 100 == 0:
+            # print('Processing tree {} / {}'.format(itree, len(tree_list)))
 
         halo = tree_list[itree]
         features = get_ancestors(
