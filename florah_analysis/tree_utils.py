@@ -249,6 +249,7 @@ def process_progenitors(
     new_node_feats = node_feats[sorted_index]
     new_halo_ids = halo_ids[sorted_index]
     new_halo_desc_ids = halo_desc_ids[sorted_index]
+    prog_position = np.array(prog_position)
 
     if return_prog_position:
         return new_halo_ids, new_halo_desc_ids, new_node_feats, prog_position
